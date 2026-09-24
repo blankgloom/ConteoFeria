@@ -561,6 +561,10 @@ body {
     background: #a93226;
 }
 
+.modal-btn.export, .modal-btn.import {
+    display: none;
+}
+
 @media (max-width: 900px) {
     .header {
         flex-wrap: wrap;

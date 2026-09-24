@@ -461,6 +461,11 @@ async function importarJSON(archivo) {
 }
 
 async function restablecerDB() {
+    const clave = prompt("Introduce la contraseña para restablecer:");
+    if (clave !== "22165267") {
+        alert("Contraseña incorrecta.");
+        return;
+    }
     if (!confirm("¿Restablecer los contadores a cero?\n" + (modoCompartido ? "Afectará a TODOS los dispositivos." : "Se borrarán los movimientos."))) return;
     const limpio = structuredClone(DEFAULT_DB);
     limpio.movimientos = [];
