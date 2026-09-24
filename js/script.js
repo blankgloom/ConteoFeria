@@ -10,7 +10,6 @@ const DEFAULT_DB = {
     totalEntradas: 0,
     totalSalidas: 0,
     maximoHistorico: 0,
-    aforoMaximo: 300,
     ultimaActualizacion: new Date().toISOString(),
     movimientos: []
 };
@@ -84,7 +83,6 @@ function esDBValida(d) {
         Number.isInteger(d.totalEntradas) && d.totalEntradas >= 0 &&
         Number.isInteger(d.totalSalidas) && d.totalSalidas >= 0 &&
         Number.isInteger(d.maximoHistorico) && d.maximoHistorico >= 0 &&
-        Number.isInteger(d.aforoMaximo) && d.aforoMaximo > 0 &&
         Array.isArray(d.movimientos)
     );
 }
@@ -96,15 +94,17 @@ function desdeFirebase(json) {
         copia.movimientos = Object.values(copia.movimientos);
     }
     if (!Array.isArray(copia.movimientos)) copia.movimientos = [];
-    ["personasDentro", "totalEntradas", "totalSalidas", "maximoHistorico", "aforoMaximo"].forEach(function (k) {
+    ["personasDentro", "totalEntradas", "totalSalidas", "maximoHistorico"].forEach(function (k) {
         copia[k] = Number.isInteger(copia[k]) ? copia[k] : (DEFAULT_DB[k] || 0);
     });
+    delete copia.aforoMaximo;
     return copia;
 }
 
 function normalizarDB(d) {
     const base = structuredClone(DEFAULT_DB);
     const mezclada = Object.assign(base, d);
+    delete mezclada.aforoMaximo;
     if (!Array.isArray(mezclada.movimientos)) mezclada.movimientos = [];
     if (mezclada.movimientos.length > 500) {
         mezclada.movimientos = mezclada.movimientos.slice(-500);
@@ -249,11 +249,10 @@ function actualizarContador(animar) {
         counter.classList.add("change");
     }
     actualizarTurno();
-    const lleno = db.personasDentro >= db.aforoMaximo;
-    entryButton.disabled = lleno || sincronizando;
+    entryButton.disabled = sincronizando;
     exitButton.disabled = sincronizando;
-    entryButton.classList.toggle("disabled", lleno);
-    entryButton.title = lleno ? "Aforo máximo alcanzado (" + db.aforoMaximo + ")" : "Registrar entrada";
+    entryButton.classList.remove("disabled");
+    entryButton.title = "Registrar entrada";
 }
 
 function bloquearBotones(bloquear) {
@@ -263,10 +262,6 @@ function bloquearBotones(bloquear) {
 
 async function registrarEntrada() {
     if (modoCompartido) {
-        if (db.personasDentro >= db.aforoMaximo) {
-            alert("AFORO MÁXIMO ALCANZADO\n\nNo se permiten más entradas (máx. " + db.aforoMaximo + ").");
-            return;
-        }
         bloquearBotones(true);
         setStatus("● Compartido: enviando entrada...", "warn");
         try {
@@ -293,10 +288,6 @@ async function registrarEntrada() {
         }
         bloquearBotones(false);
         await refrescarCompartido(false);
-        return;
-    }
-    if (db.personasDentro >= db.aforoMaximo) {
-        alert("AFORO MÁXIMO ALCANZADO\n\nNo se permiten más entradas (máx. " + db.aforoMaximo + ").");
         return;
     }
     db.personasDentro++;
@@ -384,7 +375,6 @@ function rellenarEstadisticas() {
     document.getElementById("statSalidas").textContent = db.totalSalidas;
     document.getElementById("statMaximo").textContent = db.maximoHistorico;
     document.getElementById("statHoy").textContent = movimientosDeHoy().length;
-    document.getElementById("statAforo").textContent = db.aforoMaximo;
     document.getElementById("statFecha").textContent = formatearFecha(db.ultimaActualizacion);
     const r = resumenTurnosHoy();
     document.getElementById("statMatEntradas").textContent = r.matutino.entradas;
@@ -472,9 +462,7 @@ async function importarJSON(archivo) {
 
 async function restablecerDB() {
     if (!confirm("¿Restablecer los contadores a cero?\n" + (modoCompartido ? "Afectará a TODOS los dispositivos." : "Se borrarán los movimientos."))) return;
-    const aforo = db.aforoMaximo;
     const limpio = structuredClone(DEFAULT_DB);
-    limpio.aforoMaximo = aforo;
     limpio.movimientos = [];
     limpio.ultimaActualizacion = new Date().toISOString();
     if (modoCompartido) {
