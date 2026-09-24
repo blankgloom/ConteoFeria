@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Control de Aforo</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <header class="header">
+        <div class="brand">
+            <div class="brand-icon">♙+</div>
+            <div class="brand-text">
+                <span>CONTROL DE</span>
+                <span>ENTRADAS</span>
+            </div>
+        </div>
+        <h1>SISTEMA DE CONTROL DE AFORO</h1>
+        <button class="statistics-button" id="statisticsButton">
+            <span class="statistics-icon">▥</span>
+            ESTADÍSTICAS TOTALES
+        </button>
+    </header>
+    <main class="main-content">
+        <section class="counter-section">
+            <p class="counter-title">EN EL MOMENTO</p>
+            <div class="counter" id="peopleCounter">0</div>
+            <p class="counter-subtitle">PERSONAS DENTRO</p>
+            <p class="shift-badge" id="shiftBadge">Turno: —</p>
+            <p class="db-status" id="dbStatus">Cargando base de datos...</p>
+        </section>
+        <section class="control-buttons">
+            <button class="control-button entry-button" id="entryButton">
+                <span class="button-content">
+                    <span class="arrow">↑</span>
+                    <span>ENTRADA</span>
+                    <span class="person-icon">♟</span>
+                </span>
+                <span class="status-light green-light"></span>
+            </button>
+            <button class="control-button exit-button" id="exitButton">
+                <span class="button-content">
+                    <span>SALIDA</span>
+                    <span class="arrow">↓</span>
+                </span>
+                <span class="status-light red-light"></span>
+            </button>
+        </section>
+    </main>
+    <div class="modal-overlay" id="statsModal" aria-hidden="true">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="statsTitle">
+            <div class="modal-header">
+                <h2 id="statsTitle">ESTADÍSTICAS TOTALES</h2>
+                <button class="modal-close" id="closeModal" aria-label="Cerrar">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <span class="stat-label">Dentro ahora</span>
+                        <span class="stat-value" id="statDentro">0</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-label">Entradas totales</span>
+                        <span class="stat-value green" id="statEntradas">0</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-label">Salidas totales</span>
+                        <span class="stat-value orange" id="statSalidas">0</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-label">Máximo histórico</span>
+                        <span class="stat-value" id="statMaximo">0</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-label">Movimientos hoy</span>
+                        <span class="stat-value" id="statHoy">0</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-label">Aforo máximo</span>
+                        <span class="stat-value" id="statAforo">0</span>
+                    </div>
+                </div>
+                <h3 class="history-title">Por turnos (hoy)</h3>
+                <div class="shift-grid">
+                    <div class="shift-card" id="shiftCardMatutino">
+                        <span class="shift-name">Matutino 1:00–11:59</span>
+                        <span class="shift-numbers"><b id="statMatEntradas">0</b> entradas · <b id="statMatSalidas">0</b> salidas</span>
+                    </div>
+                    <div class="shift-card" id="shiftCardDescanso">
+                        <span class="shift-name">Descanso 12:00–12:59</span>
+                        <span class="shift-numbers"><b id="statDesEntradas">0</b> entradas · <b id="statDesSalidas">0</b> salidas</span>
+                    </div>
+                    <div class="shift-card" id="shiftCardVespertino">
+                        <span class="shift-name">Vespertino 13:00–00:00</span>
+                        <span class="shift-numbers"><b id="statVesEntradas">0</b> entradas · <b id="statVesSalidas">0</b> salidas</span>
+                    </div>
+                </div>
+                <p class="stat-updated">Última actualización: <span id="statFecha">—</span></p>
+                <h3 class="history-title">Últimos movimientos</h3>
+                <ul class="history-list" id="historyList"></ul>
+                <div class="modal-actions">
+                    <button class="modal-btn export" id="exportButton">Exportar JSON</button>
+                    <button class="modal-btn import" id="importButton">Importar JSON</button>
+                    <button class="modal-btn danger" id="resetButton">Restablecer</button>
+                </div>
+                <input type="file" id="importFile" accept="application/json,.json" hidden>
+            </div>
+        </div>
+    </div>
+    <script src="js/script.js"></script>
+</body>
+</html>
