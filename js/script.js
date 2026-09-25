@@ -31,7 +31,6 @@ const closeModal = document.getElementById("closeModal");
 const exportButton = document.getElementById("exportButton");
 const importButton = document.getElementById("importButton");
 const importFile = document.getElementById("importFile");
-const resetButton = document.getElementById("resetButton");
 
 function turnoDe(fecha) {
     const h = new Date(fecha).getHours();
@@ -58,17 +57,31 @@ function actualizarTurno() {
     shiftBadge.classList.add(t);
 }
 
-function resumenTurnosHoy() {
-    const hoy = new Date().toDateString();
-    const r = {
-        matutino: { entradas: 0, salidas: 0 },
-        descanso: { entradas: 0, salidas: 0 },
-        vespertino: { entradas: 0, salidas: 0 }
-    };
+function diasEvento() {
+    const nombres = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
+    const meses = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
+    const salida = [];
+    for (let i = 0; i < 3; i++) {
+        const f = new Date();
+        f.setHours(0, 0, 0, 0);
+        f.setDate(f.getDate() + i);
+        let titulo = nombres[f.getDay()];
+        titulo = titulo.charAt(0).toUpperCase() + titulo.slice(1);
+        if (i === 0) titulo = "Hoy";
+        if (i === 1) titulo = "Mañana";
+        titulo += " · " + f.getDate() + " " + meses[f.getMonth()];
+        salida.push({ fecha: f, titulo: titulo, esHoy: i === 0 });
+    }
+    return salida;
+}
+
+function resumenDia(dia) {
+    const marca = dia.toDateString();
+    const r = { matutino: { entradas: 0, salidas: 0 }, vespertino: { entradas: 0, salidas: 0 } };
     db.movimientos.forEach(function (m) {
-        if (new Date(m.fecha).toDateString() !== hoy) return;
+        if (new Date(m.fecha).toDateString() !== marca) return;
         const t = m.turno || turnoDe(m.fecha);
-        if (!r[t]) return;
+        if (t !== "matutino" && t !== "vespertino") return;
         if (m.tipo === "entrada") r[t].entradas++;
         if (m.tipo === "salida") r[t].salidas++;
     });
@@ -376,18 +389,18 @@ function rellenarEstadisticas() {
     document.getElementById("statMaximo").textContent = db.maximoHistorico;
     document.getElementById("statHoy").textContent = movimientosDeHoy().length;
     document.getElementById("statFecha").textContent = formatearFecha(db.ultimaActualizacion);
-    const r = resumenTurnosHoy();
-    document.getElementById("statMatEntradas").textContent = r.matutino.entradas;
-    document.getElementById("statMatSalidas").textContent = r.matutino.salidas;
-    document.getElementById("statDesEntradas").textContent = r.descanso.entradas;
-    document.getElementById("statDesSalidas").textContent = r.descanso.salidas;
-    document.getElementById("statVesEntradas").textContent = r.vespertino.entradas;
-    document.getElementById("statVesSalidas").textContent = r.vespertino.salidas;
-    const actual = turnoActual();
-    ["matutino", "descanso", "vespertino"].forEach(function (t) {
-        const id = t === "matutino" ? "shiftCardMatutino" : (t === "descanso" ? "shiftCardDescanso" : "shiftCardVespertino");
-        const el = document.getElementById(id);
-        if (el) el.classList.toggle("active", t === actual);
+    const grid = document.getElementById("daysGrid");
+    grid.innerHTML = "";
+    diasEvento().forEach(function (dia) {
+        const c = resumenDia(dia.fecha);
+        const card = document.createElement("div");
+        card.className = "day-card";
+        if (dia.esHoy) card.classList.add("today");
+        card.innerHTML =
+            "<span class='day-title'>" + dia.titulo + "</span>" +
+            "<span class='day-row'>Mañana: <b>" + c.matutino.entradas + "</b> ent · <b>" + c.matutino.salidas + "</b> sal</span>" +
+            "<span class='day-row'>Tarde: <b>" + c.vespertino.entradas + "</b> ent · <b>" + c.vespertino.salidas + "</b> sal</span>";
+        grid.appendChild(card);
     });
     const lista = document.getElementById("historyList");
     lista.innerHTML = "";
@@ -460,28 +473,6 @@ async function importarJSON(archivo) {
     lector.readAsText(archivo);
 }
 
-async function restablecerDB() {
-    const clave = prompt("Introduce la contraseña para restablecer:");
-    if (clave !== "22165267") {
-        alert("Contraseña incorrecta.");
-        return;
-    }
-    if (!confirm("¿Restablecer los contadores a cero?\n" + (modoCompartido ? "Afectará a TODOS los dispositivos." : "Se borrarán los movimientos."))) return;
-    const limpio = structuredClone(DEFAULT_DB);
-    limpio.movimientos = [];
-    limpio.ultimaActualizacion = new Date().toISOString();
-    if (modoCompartido) {
-        await fbPut(limpio);
-        await refrescarCompartido(false);
-    } else {
-        db = limpio;
-        guardarLocal();
-        actualizarContador();
-    }
-    rellenarEstadisticas();
-    setStatus(modoCompartido ? "● Compartido: restablecido para todos." : "Base de datos restablecida.", "warn");
-}
-
 entryButton.addEventListener("click", registrarEntrada);
 exitButton.addEventListener("click", registrarSalida);
 statisticsButton.addEventListener("click", abrirModal);
@@ -502,7 +493,6 @@ importFile.addEventListener("change", function () {
     if (importFile.files.length > 0) importarJSON(importFile.files[0]);
     importFile.value = "";
 });
-resetButton.addEventListener("click", restablecerDB);
 
 setInterval(actualizarTurno, 60000);
 

@@ -401,14 +401,14 @@ body {
     text-align: center;
 }
 
-.shift-grid {
+.days-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 10px;
     margin-top: 10px;
 }
 
-.shift-card {
+.day-card {
     background: #f4f7fa;
     border: 1px solid #dfe4e8;
     border-radius: 10px;
@@ -420,36 +420,23 @@ body {
     text-align: center;
 }
 
-.shift-card.active {
-    border-width: 2px;
+.day-card.today {
+    border: 2px solid #08aaa5;
     background: #ffffff;
 }
 
-#shiftCardMatutino.active {
-    border-color: #08aaa5;
-}
-
-#shiftCardDescanso.active {
-    border-color: #ff8a00;
-}
-
-#shiftCardVespertino.active {
-    border-color: #2e5f67;
-}
-
-.shift-name {
-    font-size: 11px;
+.day-title {
+    font-size: 12px;
     font-weight: bold;
     color: #252f34;
-    text-transform: uppercase;
 }
 
-.shift-numbers {
+.day-row {
     font-size: 12px;
     color: #5d6368;
 }
 
-.shift-numbers b {
+.day-row b {
     color: #252f34;
 }
 
@@ -553,14 +540,6 @@ body {
     background: #079994;
 }
 
-.modal-btn.danger {
-    background: #c0392b;
-}
-
-.modal-btn.danger:hover {
-    background: #a93226;
-}
-
 .modal-btn.export, .modal-btn.import {
     display: none;
 }
@@ -643,7 +622,7 @@ body {
     .stats-grid {
         grid-template-columns: repeat(2, 1fr);
     }
-    .shift-grid {
+    .days-grid {
         grid-template-columns: 1fr;
     }
     .modal-actions {

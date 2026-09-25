@@ -76,28 +76,14 @@
                         <span class="stat-value" id="statHoy">0</span>
                     </div>
                 </div>
-                <h3 class="history-title">Por turnos (hoy)</h3>
-                <div class="shift-grid">
-                    <div class="shift-card" id="shiftCardMatutino">
-                        <span class="shift-name">Matutino 1:00–11:59</span>
-                        <span class="shift-numbers"><b id="statMatEntradas">0</b> entradas · <b id="statMatSalidas">0</b> salidas</span>
-                    </div>
-                    <div class="shift-card" id="shiftCardDescanso">
-                        <span class="shift-name">Descanso 12:00–12:59</span>
-                        <span class="shift-numbers"><b id="statDesEntradas">0</b> entradas · <b id="statDesSalidas">0</b> salidas</span>
-                    </div>
-                    <div class="shift-card" id="shiftCardVespertino">
-                        <span class="shift-name">Vespertino 13:00–00:00</span>
-                        <span class="shift-numbers"><b id="statVesEntradas">0</b> entradas · <b id="statVesSalidas">0</b> salidas</span>
-                    </div>
-                </div>
+                <h3 class="history-title">Por días</h3>
+                <div class="days-grid" id="daysGrid"></div>
                 <p class="stat-updated">Última actualización: <span id="statFecha">—</span></p>
                 <h3 class="history-title">Últimos movimientos</h3>
                 <ul class="history-list" id="historyList"></ul>
                 <div class="modal-actions">
                     <button class="modal-btn export" id="exportButton">Exportar JSON</button>
                     <button class="modal-btn import" id="importButton">Importar JSON</button>
-                    <button class="modal-btn danger" id="resetButton">Restablecer</button>
                 </div>
                 <input type="file" id="importFile" accept="application/json,.json" hidden>
             </div>
