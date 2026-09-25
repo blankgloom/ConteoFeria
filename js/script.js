@@ -11,7 +11,8 @@ const DEFAULT_DB = {
     totalSalidas: 0,
     maximoHistorico: 0,
     ultimaActualizacion: new Date().toISOString(),
-    movimientos: []
+    movimientos: [],
+    dias: {}
 };
 
 let db = structuredClone(DEFAULT_DB);
@@ -76,6 +77,13 @@ function diasEvento() {
 }
 
 function resumenDia(dia) {
+    const g = db.dias && db.dias[claveDia(dia)];
+    if (g) {
+        return {
+            matutino: { entradas: (g.matutino && g.matutino.entradas) || 0, salidas: (g.matutino && g.matutino.salidas) || 0 },
+            vespertino: { entradas: (g.vespertino && g.vespertino.entradas) || 0, salidas: (g.vespertino && g.vespertino.salidas) || 0 }
+        };
+    }
     const marca = dia.toDateString();
     const r = { matutino: { entradas: 0, salidas: 0 }, vespertino: { entradas: 0, salidas: 0 } };
     db.movimientos.forEach(function (m) {
@@ -107,6 +115,7 @@ function desdeFirebase(json) {
         copia.movimientos = Object.values(copia.movimientos);
     }
     if (!Array.isArray(copia.movimientos)) copia.movimientos = [];
+    if (!copia.dias || typeof copia.dias !== "object" || Array.isArray(copia.dias)) copia.dias = {};
     ["personasDentro", "totalEntradas", "totalSalidas", "maximoHistorico"].forEach(function (k) {
         copia[k] = Number.isInteger(copia[k]) ? copia[k] : (DEFAULT_DB[k] || 0);
     });
@@ -118,6 +127,7 @@ function normalizarDB(d) {
     const base = structuredClone(DEFAULT_DB);
     const mezclada = Object.assign(base, d);
     delete mezclada.aforoMaximo;
+    if (!mezclada.dias || typeof mezclada.dias !== "object" || Array.isArray(mezclada.dias)) mezclada.dias = {};
     if (!Array.isArray(mezclada.movimientos)) mezclada.movimientos = [];
     if (mezclada.movimientos.length > 500) {
         mezclada.movimientos = mezclada.movimientos.slice(-500);
@@ -172,6 +182,55 @@ async function fbPostMovimiento(mov) {
     return await r.json();
 }
 
+function claveDia(fecha) {
+    const f = new Date(fecha);
+    const m = String(f.getMonth() + 1).padStart(2, "0");
+    const d = String(f.getDate()).padStart(2, "0");
+    return f.getFullYear() + "-" + m + "-" + d;
+}
+
+function diasVacios() {
+    return { matutino: { entradas: 0, salidas: 0 }, vespertino: { entradas: 0, salidas: 0 }, descanso: { entradas: 0, salidas: 0 } };
+}
+
+function bumpDiaLocal(t, campo) {
+    const k = claveDia(new Date());
+    if (!db.dias || typeof db.dias !== "object") db.dias = {};
+    if (!db.dias[k]) db.dias[k] = diasVacios();
+    db.dias[k][t][campo]++;
+}
+
+async function fbSumarDia(k, t, campo) {
+    const cuerpo = {};
+    cuerpo[campo] = { ".sv": { increment: 1 } };
+    const r = await fetch(fbBase() + "/dias/" + k + "/" + t + ".json", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(cuerpo)
+    });
+    if (!r.ok) throw new Error("Firebase PATCH dias " + r.status);
+    return await r.json();
+}
+
+async function migrarDias(lista) {
+    const dias = {};
+    lista.forEach(function (m) {
+        const k = claveDia(m.fecha);
+        const t = m.turno || turnoDe(m.fecha);
+        if (t !== "matutino" && t !== "vespertino" && t !== "descanso") return;
+        if (!dias[k]) dias[k] = diasVacios();
+        if (m.tipo === "entrada") dias[k][t].entradas++;
+        if (m.tipo === "salida") dias[k][t].salidas++;
+    });
+    const r = await fetch(fbBase() + "/dias.json", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(dias)
+    });
+    if (!r.ok) throw new Error("Firebase PUT dias " + r.status);
+    return dias;
+}
+
 async function cargarDB() {
     if (modoCompartido) {
         await refrescarCompartido(true);
@@ -218,6 +277,12 @@ async function refrescarCompartido(esInicio) {
         } else {
             const conv = desdeFirebase(raw);
             if (!esDBValida(conv)) throw new Error("Datos remotos inválidos");
+            if (!raw.dias && raw.movimientos) {
+                try {
+                    const full = Array.isArray(raw.movimientos) ? raw.movimientos : Object.values(raw.movimientos);
+                    conv.dias = await migrarDias(full);
+                } catch (e) {}
+            }
             db = normalizarDB(conv);
         }
         guardarLocal(true);
@@ -283,6 +348,7 @@ async function registrarEntrada() {
                 totalEntradas: { ".sv": { increment: 1 } },
                 ultimaActualizacion: new Date().toISOString()
             });
+            await fbSumarDia(claveDia(new Date()), turnoActual(), "entradas");
             await refrescarCompartido(false);
             if (db.personasDentro > db.maximoHistorico) {
                 await fbPatch({ maximoHistorico: db.personasDentro });
@@ -306,6 +372,7 @@ async function registrarEntrada() {
     db.personasDentro++;
     db.totalEntradas++;
     db.movimientos.push({ tipo: "entrada", fecha: new Date().toISOString(), totalDentro: db.personasDentro, turno: turnoActual() });
+    bumpDiaLocal(turnoActual(), "entradas");
     db.ultimaActualizacion = new Date().toISOString();
     guardarLocal();
     actualizarContador();
@@ -325,6 +392,7 @@ async function registrarSalida() {
                 totalSalidas: { ".sv": { increment: 1 } },
                 ultimaActualizacion: new Date().toISOString()
             });
+            await fbSumarDia(claveDia(new Date()), turnoActual(), "salidas");
             await refrescarCompartido(false);
             if (db.personasDentro < 0) {
                 await fbPatch({ personasDentro: 0 });
@@ -352,16 +420,25 @@ async function registrarSalida() {
     db.personasDentro--;
     db.totalSalidas++;
     db.movimientos.push({ tipo: "salida", fecha: new Date().toISOString(), totalDentro: db.personasDentro, turno: turnoActual() });
+    bumpDiaLocal(turnoActual(), "salidas");
     db.ultimaActualizacion = new Date().toISOString();
     guardarLocal();
     actualizarContador();
 }
 
 function movimientosDeHoy() {
+    const g = db.dias && db.dias[claveDia(new Date())];
+    if (g) {
+        let n = 0;
+        ["matutino", "vespertino", "descanso"].forEach(function (t) {
+            if (g[t]) n += (g[t].entradas || 0) + (g[t].salidas || 0);
+        });
+        return n;
+    }
     const hoy = new Date().toDateString();
     return db.movimientos.filter(function (m) {
         return new Date(m.fecha).toDateString() === hoy;
-    });
+    }).length;
 }
 
 function formatearFecha(iso) {
@@ -387,7 +464,7 @@ function rellenarEstadisticas() {
     document.getElementById("statEntradas").textContent = db.totalEntradas;
     document.getElementById("statSalidas").textContent = db.totalSalidas;
     document.getElementById("statMaximo").textContent = db.maximoHistorico;
-    document.getElementById("statHoy").textContent = movimientosDeHoy().length;
+    document.getElementById("statHoy").textContent = movimientosDeHoy();
     document.getElementById("statFecha").textContent = formatearFecha(db.ultimaActualizacion);
     const grid = document.getElementById("daysGrid");
     grid.innerHTML = "";
