@@ -62,12 +62,13 @@ function diasEvento() {
     const nombres = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
     const meses = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
     const salida = [];
-    for (let i = 0; i < 3; i++) {
+    for (let i = -1; i <= 1; i++) {
         const f = new Date();
         f.setHours(0, 0, 0, 0);
         f.setDate(f.getDate() + i);
         let titulo = nombres[f.getDay()];
         titulo = titulo.charAt(0).toUpperCase() + titulo.slice(1);
+        if (i === -1) titulo = "Ayer";
         if (i === 0) titulo = "Hoy";
         if (i === 1) titulo = "Mañana";
         titulo += " · " + f.getDate() + " " + meses[f.getMonth()];
